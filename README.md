@@ -178,20 +178,20 @@ From `cmd.exe`, replace `${PWD}` with `%cd%`. If your sounds live elsewhere, use
 
 ### Option D: Standalone executable (recommended for Linux desktops)
 
-Download the ready-made `soundboard` executable and just run it — no Python, no Docker, no build step on your end. It's produced by `.github/workflows/build.yml` with [PyInstaller](https://pyinstaller.org/), which bundles the Python runtime and all pip dependencies (`discord.py`, `PyNaCl`, `python-dotenv`) into that single file. (If you're the one maintaining the bot and want to build it yourself instead of downloading it, see [Building the standalone executables](#building-the-standalone-executables) under Development.)
+Download the ready-made `soundboard-linux` (or `soundboard-windows.exe`) executable and just run it — no Python, no Docker, no build step on your end. It's produced by `.github/workflows/build.yml` with [PyInstaller](https://pyinstaller.org/), which bundles the Python runtime and all pip dependencies (`discord.py`, `PyNaCl`, `python-dotenv`) into that single file — the filename itself tells you which environment it's for. (If you're the one maintaining the bot and want to build it yourself instead of downloading it, see [Building the standalone executables](#building-the-standalone-executables) under Development.)
 
-> ⚠️ **This is the recommended option on Linux, but not on Windows.** The Linux build also bundles `ffmpeg` itself — nothing else to install. The Windows build does **not** bundle `ffmpeg` (see the note below), which is exactly why [Option C (Docker)](#option-c-plain-docker-with-sounds-mounted-as-a-volume-windows) is the recommended path on Windows instead — its image already installs `ffmpeg` for you.
+> ⚠️ **This is the recommended option on Linux, but not on Windows.** `soundboard-linux` also bundles `ffmpeg` itself — nothing else to install. `soundboard-windows.exe` does **not** bundle `ffmpeg` (see the note below), which is exactly why [Option C (Docker)](#option-c-plain-docker-with-sounds-mounted-as-a-volume-windows) is the recommended path on Windows instead — its image already installs `ffmpeg` for you.
 
 **1. Download it:**
 
 - Go to the repo's **Actions** tab → **Build standalone executables** → open the latest successful run → download `soundboard-linux` (or `soundboard-windows`) from **Artifacts**.
-- Or, if a version tag was pushed (e.g. `v1.0.0`), grab it directly from that tag's **Release** page instead.
+- Or, if a version tag was pushed (e.g. `v1.0.0`), grab `soundboard-linux` / `soundboard-windows.exe` directly from that tag's **Release** page instead.
 
 **2. Set it up:** put the executable in its own folder, alongside a `.env` (copied from `.env.example` and filled in) and a `sounds/` folder with your categories — same layout as [section 3](#3-add-sounds).
 
-**3. `ffmpeg`, if you're on Windows** — the Linux build bundles it, so this step is Linux-only... except it isn't needed there. On Windows, the executable doesn't bundle it: there's no first-party source of a portable `ffmpeg.exe` the CI could pull from without depending on a third-party download, so download a portable build yourself (e.g. from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) or [BtbN's builds](https://github.com/BtbN/FFmpeg-Builds/releases)) and drop `ffmpeg.exe` in the same folder as `soundboard.exe` (or anywhere on `PATH`) — or just use Option C instead, which doesn't require this step.
+**3. `ffmpeg`, if you're on Windows** — `soundboard-linux` bundles it, so this step is Windows-only. `soundboard-windows.exe` doesn't bundle it: there's no first-party source of a portable `ffmpeg.exe` the CI could pull from without depending on a third-party download, so download a portable build yourself (e.g. from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) or [BtbN's builds](https://github.com/BtbN/FFmpeg-Builds/releases)) and drop `ffmpeg.exe` in the same folder as `soundboard-windows.exe` (or anywhere on `PATH`) — or just use Option C instead, which doesn't require this step.
 
-**4. Run it:** `./soundboard` from a terminal on Linux (`chmod +x soundboard` first if it lost its executable bit, e.g. after unzipping), or double-click `soundboard.exe` on Windows.
+**4. Run it:** `./soundboard-linux` from a terminal on Linux (`chmod +x soundboard-linux` first if it lost its executable bit, e.g. after unzipping), or double-click `soundboard-windows.exe` on Windows.
 
 The `--collect-all nacl --hidden-import _cffi_backend` flags are required on both platforms, not optional: PyNaCl's compiled `_sodium` extension is loaded through `cffi`, which PyInstaller's static analysis doesn't detect on its own — without these flags the executable builds fine but silently loses voice support (logs `PyNaCl is not installed` at startup instead of failing loudly).
 

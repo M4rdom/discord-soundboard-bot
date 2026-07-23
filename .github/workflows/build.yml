@@ -56,17 +56,29 @@ jobs:
           --collect-all nacl --hidden-import _cffi_backend
           src/main.py
 
+      # Renames the built binary to include its target environment, so the
+      # filename attached to the Release (not just the Actions artifact name)
+      # makes it obvious which one to download for Linux vs Windows.
+      - name: Rename executable with environment suffix
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            mv dist/soundboard.exe dist/soundboard-windows.exe
+          else
+            mv dist/soundboard dist/soundboard-linux
+          fi
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: soundboard-${{ matrix.os == 'windows-latest' && 'windows' || 'linux' }}
-          path: dist/soundboard*
+          path: dist/soundboard-*
 
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/soundboard*
+          files: dist/soundboard-*
 
   publish-image:
     runs-on: ubuntu-latest
