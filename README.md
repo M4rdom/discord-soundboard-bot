@@ -8,8 +8,8 @@ Soundboard panel bot for a private Discord server. It scans a local `sounds/` fo
 
 - Automatic scan of `sounds/<category>/` on startup (`.mp3` and `.ogg` formats).
 - `/panel` command that posts the panel (also posted automatically on bot startup).
-- One native Discord `Select Menu` per category (max. 4 categories / 25 sounds each, Discord's limit).
-- `/sound <name>` command with autocomplete to search and play **any** sound in the library, not limited by the panel's 4-category / 25-sound cap.
+- One native Discord `Select Menu` per category (see [Limitations](#limitation-the-visual-panel-caps-at-4-categories-and-25-sounds-each) for the panel's category/sound cap).
+- `/sound <name>` command with autocomplete to search and play **any** sound in the library, without that cap.
 - Red **🛑 Stop Audio** button.
 - The bot automatically joins or moves to the voice channel of the user interacting with it.
 - Sounds **overlap** with each other (playing a new one doesn't cut off the previous one).
