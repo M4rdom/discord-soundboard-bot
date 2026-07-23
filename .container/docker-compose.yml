@@ -1,0 +1,9 @@
+services:
+  soundboard:
+    build:
+      context: ..
+      dockerfile: .container/Dockerfile
+    env_file: ../.env
+    volumes:
+      - ../sounds:/app/sounds
+    restart: unless-stopped
