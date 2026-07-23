@@ -16,6 +16,12 @@ Soundboard panel bot for a private Discord server. It scans a local `sounds/` fo
 - After every action (play or stop), the panel is reposted at the bottom of the channel so it stays visible.
 - The bot only responds inside the text channel configured in `.env`.
 
+## Limitation: the visual panel caps at 4 categories and 25 sounds each
+
+> ⚠️ This isn't a bug or a choice we made — it's a hard limit of Discord's UI. A message supports a maximum of **5 component rows**, each category's `Select Menu` takes up a whole row, and one row is reserved for the **🛑 Stop Audio** button, which leaves room for **at most 4 category menus**. Within each of those, a `Select Menu` supports at most **25 options**. So the point-and-click panel alone can only ever surface **up to 100 sounds** (4 × 25), no matter how many files you actually have in `sounds/`.
+
+If your library is bigger than that, anything beyond the cap is silently skipped from the panel (a warning is logged on startup naming what got left out) — but nothing is actually lost or deleted. **The `/sound <name>` command searches the entire library**, with no category or count limit, because Discord's autocomplete isn't bound by the same 5-row constraint — it just returns up to 25 matching suggestions as you type. In practice: use the panel for quick access to your most common sounds, and `/sound` to reach anything past the first 100 (or anything in a 5th+ category).
+
 ## Project structure
 
 ```
@@ -98,7 +104,7 @@ sounds/
     └── applause.ogg
 ```
 
-> ⚠️ Discord allows a maximum of 5 component rows per message. Since the stop button takes up one, the **panel** supports **up to 4 categories**, with **up to 25 sounds** each. Anything beyond that is skipped for the panel (logged on startup) — but it's still reachable through `/sound`, which searches the full, uncapped library.
+> ⚠️ More than 4 categories, or more than 25 sounds in one? See [Limitation: the visual panel caps at 4 categories and 25 sounds each](#limitation-the-visual-panel-caps-at-4-categories-and-25-sounds-each) — nothing is lost, `/sound` still reaches everything.
 >
 > ⚠️ If the same category has both `bruh.mp3` and `bruh.ogg`, they'll show up as two options with the same name (not deduplicated).
 
