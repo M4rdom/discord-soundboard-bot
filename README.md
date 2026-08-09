@@ -1,4 +1,4 @@
-# 🎛️ Discord Soundboard Bot
+# Discord Soundboard Bot
 
 Soundboard panel bot for a private Discord server. It scans a local `sounds/` folder and exposes a panel with dropdown menus (one per category) to play sound effects in the user's voice channel, with overlapping audio and a button to stop everything.
 
