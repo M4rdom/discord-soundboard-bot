@@ -93,7 +93,7 @@ class SoundboardBot(commands.Bot):
             return
 
         if any(not m.bot for m in channel.members):
-            return  # still humans in there
+            return
 
         await voice_client.disconnect(force=True)
         mixer = self.mixers.pop(member.guild.id, None)
@@ -101,24 +101,18 @@ class SoundboardBot(commands.Bot):
             mixer.cleanup()
 
     def build_panel_embed(self) -> discord.Embed:
-        embed = discord.Embed(
-            title="🎛️ Sound Panel",
-            description=(
+        if self.library:
+            description = (
                 "Pick a sound from the categories below, or use `/sound` to search the "
                 "whole library. Sounds overlap with each other."
-            ),
-            color=discord.Color.blurple(),
-        )
-        if not self.library:
-            embed.add_field(
-                name="⚠️ No sounds",
-                value=f"No .mp3/.ogg files found in `{config.SOUNDS_DIR}/`.",
-                inline=False,
             )
         else:
-            for category, clips in self.library.items():
-                embed.add_field(name=f"🎵 {category}", value=f"{len(clips)} sound(s)", inline=True)
-        return embed
+            description = f"No .mp3/.ogg files found in `{config.SOUNDS_DIR}/`."
+        return discord.Embed(
+            title="Sound Panel",
+            description=description,
+            color=discord.Color.blurple(),
+        )
 
     async def send_panel(self, channel: discord.abc.Messageable) -> None:
         message_ids: list[int] = []
@@ -127,9 +121,8 @@ class SoundboardBot(commands.Bot):
         for index, chunk in enumerate(chunks):
             view = SoundboardPanelView(chunk, self, include_stop_button=(index == last_index))
             if index == 0:
-                # Only the first message carries the summary embed (title, description,
-                # per-category counts for the whole library) — repeating it on every
-                # message would just be noise.
+                # Only the first message carries the summary embed — repeating it on
+                # every message would just be noise.
                 message = await channel.send(embed=self.build_panel_embed(), view=view)
             else:
                 message = await channel.send(view=view)

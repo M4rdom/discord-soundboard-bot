@@ -24,7 +24,7 @@ SUPPORTED_EXTENSIONS = (".mp3", ".ogg")
 class SoundClip:
     id: str  # short stable id, safe to use as a SelectOption/Choice 'value' (100 char limit)
     label: str  # display name (filename without extension, or "category/filename")
-    path: str  # local path to the file
+    path: str
 
 
 def _make_clip(path: Path, label: str) -> SoundClip:
