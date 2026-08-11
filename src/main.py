@@ -43,8 +43,11 @@ class SoundboardBot(commands.Bot):
             )
 
         # Register each message's view with fixed custom_ids so they survive bot restarts.
-        for index, chunk in enumerate(chunk_for_messages(self.library)):
-            self.add_view(SoundboardPanelView(chunk, self, index))
+        chunks = chunk_for_messages(self.library)
+        last_index = len(chunks) - 1
+        for index, chunk in enumerate(chunks):
+            view = SoundboardPanelView(chunk, self, include_stop_button=(index == last_index))
+            self.add_view(view)
 
         if config.GUILD_ID:
             guild = discord.Object(id=config.GUILD_ID)
@@ -119,8 +122,10 @@ class SoundboardBot(commands.Bot):
 
     async def send_panel(self, channel: discord.abc.Messageable) -> None:
         message_ids: list[int] = []
-        for index, chunk in enumerate(chunk_for_messages(self.library)):
-            view = SoundboardPanelView(chunk, self, index)
+        chunks = chunk_for_messages(self.library)
+        last_index = len(chunks) - 1
+        for index, chunk in enumerate(chunks):
+            view = SoundboardPanelView(chunk, self, include_stop_button=(index == last_index))
             if index == 0:
                 # Only the first message carries the summary embed (title, description,
                 # per-category counts for the whole library) — repeating it on every

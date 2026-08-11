@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from sound_library import (
+    MAX_CATEGORIES_FULL_MESSAGE,
     MAX_CATEGORIES_PER_MESSAGE,
     MAX_OPTIONS_PER_CATEGORY,
     chunk_for_messages,
@@ -65,7 +66,9 @@ def test_scan_sounds_caps_categories_to_one_message(tmp_path):
 
 def test_scan_sounds_caps_categories_across_multiple_messages(tmp_path):
     max_messages = 3
-    cap = MAX_CATEGORIES_PER_MESSAGE * max_messages
+    # Only the last message reserves a slot for the Stop button; earlier ones
+    # use the full 5 rows.
+    cap = MAX_CATEGORIES_FULL_MESSAGE * (max_messages - 1) + MAX_CATEGORIES_PER_MESSAGE
     category_names = [f"cat{i:02d}" for i in range(cap + 2)]
     for name in category_names:
         _touch(tmp_path / name / "clip.mp3")
@@ -134,7 +137,31 @@ def test_panel_and_flat_scan_share_ids_for_the_same_file(tmp_path):
     assert panel_clip.id == flat_clip.id
 
 
-def test_chunk_for_messages_splits_into_groups_of_four(tmp_path):
+def test_chunk_for_messages_single_message_when_it_fits(tmp_path):
+    category_names = ["cat0", "cat1", "cat2"]
+    for name in category_names:
+        _touch(tmp_path / name / "clip.mp3")
+    library = scan_sounds(str(tmp_path), max_messages=1)
+
+    assert chunk_for_messages(library) == [library]
+
+
+def test_chunk_for_messages_earlier_messages_use_all_five_slots(tmp_path):
+    # 9 categories: message 1 uses all 5 slots (no button needed there),
+    # message 2 gets the remaining 4 plus the Stop Audio button.
+    category_names = [f"cat{i:02d}" for i in range(9)]
+    for name in category_names:
+        _touch(tmp_path / name / "clip.mp3")
+    library = scan_sounds(str(tmp_path), max_messages=2)
+
+    chunks = chunk_for_messages(library)
+
+    assert [len(chunk) for chunk in chunks] == [5, 4]
+    assert list(chunks[0].keys()) == sorted(category_names)[:5]
+    assert list(chunks[1].keys()) == sorted(category_names)[5:9]
+
+
+def test_chunk_for_messages_exact_multiple_of_five_leaves_last_message_button_only(tmp_path):
     category_names = [f"cat{i:02d}" for i in range(10)]
     for name in category_names:
         _touch(tmp_path / name / "clip.mp3")
@@ -142,9 +169,7 @@ def test_chunk_for_messages_splits_into_groups_of_four(tmp_path):
 
     chunks = chunk_for_messages(library)
 
-    assert [len(chunk) for chunk in chunks] == [4, 4, 2]
-    assert list(chunks[0].keys()) == sorted(category_names)[:4]
-    assert list(chunks[2].keys()) == sorted(category_names)[8:10]
+    assert [len(chunk) for chunk in chunks] == [5, 5, 0]
 
 
 def test_chunk_for_messages_empty_library_returns_one_empty_chunk():

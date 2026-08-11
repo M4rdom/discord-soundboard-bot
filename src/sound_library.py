@@ -7,11 +7,13 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-# Limits imposed by the Discord API (Message Components v1):
-# a message supports 5 action rows; each Select Menu takes up a whole row,
-# so we reserve one row for the "Stop Audio" button. The panel can spread
-# across multiple messages (see config.PANEL_MAX_MESSAGES) to fit more.
+# Limits imposed by the Discord API (Message Components v1): a message
+# supports 5 action rows and each Select Menu takes up a whole row. Only the
+# *last* panel message needs a row for the "Stop Audio" button, so it caps at
+# 4 categories; every earlier message uses all 5 rows for Select Menus. The
+# panel can spread across multiple messages (see config.PANEL_MAX_MESSAGES).
 MAX_CATEGORIES_PER_MESSAGE = 4
+MAX_CATEGORIES_FULL_MESSAGE = 5
 MAX_OPTIONS_PER_CATEGORY = 25
 
 # ffmpeg decodes both formats equally well; no conversion needed.
@@ -49,17 +51,28 @@ def _iter_clips(category: Path) -> list[Path]:
     )
 
 
+def _max_categories_for(max_messages: int) -> int:
+    """Total categories the panel can show across max_messages messages.
+
+    Only the last message reserves a row for the Stop Audio button; every
+    earlier one uses all MAX_CATEGORIES_FULL_MESSAGE rows for Select Menus.
+    """
+    if max_messages <= 1:
+        return MAX_CATEGORIES_PER_MESSAGE
+    return MAX_CATEGORIES_FULL_MESSAGE * (max_messages - 1) + MAX_CATEGORIES_PER_MESSAGE
+
+
 def scan_sounds(sounds_dir: str, max_messages: int) -> dict[str, list[SoundClip]]:
     """Walks sounds/<category>/ (.mp3/.ogg) and returns a dict ordered by category.
 
-    Capped to MAX_CATEGORIES_PER_MESSAGE * max_messages / MAX_OPTIONS_PER_CATEGORY
-    so the result fits across that many panel messages (see chunk_for_messages).
+    Capped to fit across max_messages panel messages (see chunk_for_messages
+    and _max_categories_for) / MAX_OPTIONS_PER_CATEGORY per category.
     For the full, uncapped library see scan_all_clips.
     """
     categories = _iter_categories(sounds_dir)
     library: dict[str, list[SoundClip]] = {}
 
-    max_categories = MAX_CATEGORIES_PER_MESSAGE * max_messages
+    max_categories = _max_categories_for(max_messages)
     if len(categories) > max_categories:
         omitted = [c.name for c in categories[max_categories:]]
         log.warning(
@@ -109,14 +122,23 @@ def scan_all_clips(sounds_dir: str) -> list[SoundClip]:
 def chunk_for_messages(library: dict[str, list[SoundClip]]) -> list[dict[str, list[SoundClip]]]:
     """Splits a scan_sounds() catalog into one dict per Discord panel message.
 
-    Each chunk has at most MAX_CATEGORIES_PER_MESSAGE categories, preserving
-    order. Always returns at least one (possibly empty) chunk, so there's
-    always a message to post even with zero categories.
+    Only the last chunk needs a Stop Audio button, so it's capped at
+    MAX_CATEGORIES_PER_MESSAGE; every earlier chunk uses the full
+    MAX_CATEGORIES_FULL_MESSAGE Select Menu rows. Always returns at least one
+    (possibly empty) chunk, so there's always a message to post — including
+    when an earlier chunk exactly uses up every category, leaving the last,
+    button-only message with none.
     """
     items = list(library.items())
     if not items:
         return [{}]
-    return [
-        dict(items[i : i + MAX_CATEGORIES_PER_MESSAGE])
-        for i in range(0, len(items), MAX_CATEGORIES_PER_MESSAGE)
-    ]
+    if len(items) <= MAX_CATEGORIES_PER_MESSAGE:
+        return [dict(items)]
+
+    chunks: list[dict[str, list[SoundClip]]] = []
+    i = 0
+    while len(items) - i > MAX_CATEGORIES_PER_MESSAGE:
+        chunks.append(dict(items[i : i + MAX_CATEGORIES_FULL_MESSAGE]))
+        i += MAX_CATEGORIES_FULL_MESSAGE
+    chunks.append(dict(items[i:]))
+    return chunks

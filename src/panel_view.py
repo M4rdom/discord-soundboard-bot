@@ -27,14 +27,11 @@ class CategorySelect(discord.ui.Select):
 
 
 class StopButton(discord.ui.Button):
-    def __init__(self, message_index: int):
+    def __init__(self):
         super().__init__(
             label="🛑 Stop Audio",
             style=discord.ButtonStyle.danger,
-            # The panel can span several messages (see chunk_for_messages); each
-            # one's button needs its own custom_id, even though they all do the
-            # same thing, since custom_ids must be unique per persistent view.
-            custom_id=f"btn_stop_{message_index}",
+            custom_id="btn_stop",
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
@@ -43,12 +40,18 @@ class StopButton(discord.ui.Button):
 
 
 class SoundboardPanelView(discord.ui.View):
-    """Persistent view (timeout=None) rebuilt from a chunk_for_messages() chunk."""
+    """Persistent view (timeout=None) rebuilt from a chunk_for_messages() chunk.
 
-    def __init__(self, library: dict[str, list[SoundClip]], bot, message_index: int):
+    Only the last message of a multi-message panel carries the Stop Audio
+    button (see chunk_for_messages) — earlier ones use all 5 rows for
+    category Select Menus instead.
+    """
+
+    def __init__(self, library: dict[str, list[SoundClip]], bot, *, include_stop_button: bool):
         super().__init__(timeout=None)
         self.bot = bot
 
         for category, clips in library.items():
             self.add_item(CategorySelect(category, clips))
-        self.add_item(StopButton(message_index))
+        if include_stop_button:
+            self.add_item(StopButton())
