@@ -8,7 +8,7 @@ Soundboard panel bot for a private Discord server. It scans a local `sounds/` fo
 
 - Automatic scan of `sounds/<category>/` on startup (`.mp3` and `.ogg` formats).
 - `/panel` command that posts the panel (also posted automatically on bot startup).
-- One native Discord `Select Menu` per category (see [Limitations](#limitation-the-visual-panel-caps-at-4-categories-and-25-sounds-each) for the panel's category/sound cap).
+- One native Discord `Select Menu` per category (see [Limitations](#limitation-each-panel-message-caps-at-4-categories-25-sounds-each) for the panel's category/sound cap).
 - `/sound <name>` command with autocomplete to search and play **any** sound in the library, without that cap.
 - Red **🛑 Stop Audio** button.
 - The bot automatically joins or moves to the voice channel of the user interacting with it.
@@ -16,11 +16,13 @@ Soundboard panel bot for a private Discord server. It scans a local `sounds/` fo
 - After every action (play or stop), the panel is reposted at the bottom of the channel so it stays visible.
 - The bot only responds inside the text channel configured in `.env`.
 
-## Limitation: the visual panel caps at 4 categories and 25 sounds each
+## Limitation: each panel message caps at 4 categories, 25 sounds each
 
-> ⚠️ This isn't a bug or a choice we made — it's a hard limit of Discord's UI. A message supports a maximum of **5 component rows**, each category's `Select Menu` takes up a whole row, and one row is reserved for the **🛑 Stop Audio** button, which leaves room for **at most 4 category menus**. Within each of those, a `Select Menu` supports at most **25 options**. So the point-and-click panel alone can only ever surface **up to 100 sounds** (4 × 25), no matter how many files you actually have in `sounds/`.
+> ⚠️ This isn't a bug or a choice we made — it's a hard limit of Discord's UI. A message supports a maximum of **5 component rows**, each category's `Select Menu` takes up a whole row, and one row is reserved for the **🛑 Stop Audio** button, which leaves room for **at most 4 category menus per message**. Within each of those, a `Select Menu` supports at most **25 options** — that part isn't configurable, it's a Discord ceiling.
 
-If your library is bigger than that, anything beyond the cap is silently skipped from the panel (a warning is logged on startup naming what got left out) — but nothing is actually lost or deleted. **The `/sound <name>` command searches the entire library**, with no category or count limit, because Discord's autocomplete isn't bound by the same 5-row constraint — it just returns up to 25 matching suggestions as you type. In practice: use the panel for quick access to your most common sounds, and `/sound` to reach anything past the first 100 (or anything in a 5th+ category).
+The 4-categories-**per-message** part is worked around by spreading the panel across several messages: set **`PANEL_MAX_MESSAGES`** in `.env` (defaults to **3**, i.e. up to **12 categories** / up to **300 sounds** total). Every extra message repeats the 🛑 Stop Audio button, so it's always within reach no matter which panel message you're looking at, and after every action the bot deletes and reposts the *whole* set of panel messages together, so they always stay as one contiguous block at the bottom of the channel instead of drifting apart as the conversation continues.
+
+If your library is still bigger than `4 × PANEL_MAX_MESSAGES` categories, anything beyond that is silently skipped from the panel (a warning is logged on startup naming what got left out) — but nothing is actually lost or deleted. **The `/sound <name>` command searches the entire library**, with no category or count limit and regardless of `PANEL_MAX_MESSAGES`, because Discord's autocomplete isn't bound by the same per-message row constraint — it just returns up to 25 matching suggestions as you type. In practice: use the panel for quick access to your most common sounds, and `/sound` to reach anything past the panel's cap.
 
 ## Project structure
 
@@ -85,6 +87,7 @@ DISCORD_TOKEN=your_token_here
 PANEL_CHANNEL_ID=123456789012345678   # text channel where the panel will live
 GUILD_ID=123456789012345678           # optional, syncs /panel instantly during development
 SOUNDS_DIR=sounds                     # optional
+PANEL_MAX_MESSAGES=3                  # optional, see Limitations below
 ```
 
 To get the IDs, enable **Developer Mode** in Discord (Settings → Advanced) and right-click the channel/server → **Copy ID**.
@@ -104,7 +107,7 @@ sounds/
     └── applause.ogg
 ```
 
-> ⚠️ More than 4 categories, or more than 25 sounds in one? See [Limitation: the visual panel caps at 4 categories and 25 sounds each](#limitation-the-visual-panel-caps-at-4-categories-and-25-sounds-each) — nothing is lost, `/sound` still reaches everything.
+> ⚠️ More than 4 categories, or more than 25 sounds in one? See [Limitation: each panel message caps at 4 categories, 25 sounds each](#limitation-each-panel-message-caps-at-4-categories-25-sounds-each) — nothing is lost, `/sound` still reaches everything.
 >
 > ⚠️ If the same category has both `bruh.mp3` and `bruh.ogg`, they'll show up as two options with the same name (not deduplicated).
 
@@ -215,7 +218,7 @@ The `--collect-all nacl --hidden-import _cffi_backend` flags are required on bot
 
 4. You can pick another sound while one is already playing: they'll **overlap**.
 5. Press **🛑 Stop Audio** to stop everything that's playing.
-6. After every action, the bot deletes the panel it used and posts a new one at the bottom of the channel.
+6. After every action, the bot deletes the panel message(s) it used and posts a fresh set at the bottom of the channel.
 7. If everyone leaves the voice channel, the bot automatically disconnects instead of sitting there alone.
 
 ## Development
@@ -280,5 +283,6 @@ The `--collect-all nacl --hidden-import _cffi_backend` flags are required on bot
 - Audio overlap is implemented in `src/audio_mixer.py`: `SoundMixer` is a `discord.AudioSource` that keeps a list of active `FFmpegPCMAudio` sources and mixes their PCM frames (`audioop.add`) on every 20 ms tick. It's played exactly once per voice connection; adding a new sound just adds another source to the mix.
 - Each `SoundClip` gets a short, stable `id` (a hash of its file path, see `src/sound_library.py`) used as the `SelectOption`/autocomplete `value` instead of the raw path — Discord caps those values at 100 characters, which long filenames can exceed.
 - `on_voice_state_update` in `src/main.py` disconnects the bot from a voice channel once no non-bot members remain in it, freeing the connection and its `SoundMixer`.
-- The panel's `View` is registered as persistent (`timeout=None` + fixed `custom_id`s via `bot.add_view(...)` in `setup_hook`), so buttons/menus keep working after the bot restarts, even on older panel messages.
-- `sound_library.py` exposes two catalogs: `scan_sounds()` (capped to fit the panel's Select Menus) and `scan_all_clips()` (the full, uncapped flat list used by `/sound`'s autocomplete, which isn't bound by Discord's 5-row limit).
+- The panel's `View`s are registered as persistent (`timeout=None` + fixed `custom_id`s via `bot.add_view(...)` in `setup_hook`, one per message), so buttons/menus keep working after the bot restarts, even on older panel messages. Each message's `StopButton` gets its own `custom_id` (`btn_stop_<index>`) since persistent `custom_id`s must be unique even though every stop button does the same thing.
+- `sound_library.py` exposes two catalogs: `scan_sounds()` (capped to `4 × PANEL_MAX_MESSAGES` categories to fit the panel's Select Menus, split into per-message chunks by `chunk_for_messages()`) and `scan_all_clips()` (the full, uncapped flat list used by `/sound`'s autocomplete, which isn't bound by Discord's 5-row limit).
+- `SoundboardBot.panel_message_ids` tracks the current set of panel message IDs; `clear_panel_messages()` deletes all of them (via `get_partial_message()`, no fetch needed) before `send_panel()` posts a fresh set, keeping every message of a multi-message panel in sync as one contiguous block.

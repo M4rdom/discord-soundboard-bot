@@ -10,7 +10,7 @@ from discord.ext import commands
 import config
 from audio_mixer import SoundMixer
 from panel_view import SoundboardPanelView
-from sound_library import SoundClip, scan_all_clips, scan_sounds
+from sound_library import SoundClip, chunk_for_messages, scan_all_clips, scan_sounds
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s: %(message)s")
 log = logging.getLogger("soundboard")
@@ -30,9 +30,10 @@ class SoundboardBot(commands.Bot):
         self.all_clips: list[SoundClip] = []
         self.clip_by_id: dict[str, str] = {}
         self.mixers: dict[int, SoundMixer] = {}
+        self.panel_message_ids: list[int] = []
 
     async def setup_hook(self) -> None:
-        self.library = scan_sounds(config.SOUNDS_DIR)
+        self.library = scan_sounds(config.SOUNDS_DIR, config.PANEL_MAX_MESSAGES)
         self.all_clips = scan_all_clips(config.SOUNDS_DIR)
         self.clip_by_id = {clip.id: clip.path for clip in self.all_clips}
         if not self.library:
@@ -41,8 +42,9 @@ class SoundboardBot(commands.Bot):
                 config.SOUNDS_DIR,
             )
 
-        # Register the view with fixed custom_ids so it survives bot restarts.
-        self.add_view(SoundboardPanelView(self.library, self))
+        # Register each message's view with fixed custom_ids so they survive bot restarts.
+        for index, chunk in enumerate(chunk_for_messages(self.library)):
+            self.add_view(SoundboardPanelView(chunk, self, index))
 
         if config.GUILD_ID:
             guild = discord.Object(id=config.GUILD_ID)
@@ -116,8 +118,26 @@ class SoundboardBot(commands.Bot):
         return embed
 
     async def send_panel(self, channel: discord.abc.Messageable) -> None:
-        view = SoundboardPanelView(self.library, self)
-        await channel.send(embed=self.build_panel_embed(), view=view)
+        message_ids: list[int] = []
+        for index, chunk in enumerate(chunk_for_messages(self.library)):
+            view = SoundboardPanelView(chunk, self, index)
+            if index == 0:
+                # Only the first message carries the summary embed (title, description,
+                # per-category counts for the whole library) — repeating it on every
+                # message would just be noise.
+                message = await channel.send(embed=self.build_panel_embed(), view=view)
+            else:
+                message = await channel.send(view=view)
+            message_ids.append(message.id)
+        self.panel_message_ids = message_ids
+
+    async def clear_panel_messages(self, channel: discord.TextChannel) -> None:
+        for message_id in self.panel_message_ids:
+            try:
+                await channel.get_partial_message(message_id).delete()
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                pass
+        self.panel_message_ids = []
 
     def get_mixer(self, guild_id: int) -> SoundMixer:
         mixer = self.mixers.get(guild_id)
@@ -159,14 +179,8 @@ class SoundboardBot(commands.Bot):
         return voice_client
 
     async def _repost_panel(self, interaction: discord.Interaction) -> None:
-        # Slash command interactions (like /sound) aren't tied to a message, only
-        # component interactions from the panel itself are.
-        if interaction.message is not None:
-            try:
-                await interaction.message.delete()
-            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
-                pass
         assert isinstance(interaction.channel, discord.TextChannel)
+        await self.clear_panel_messages(interaction.channel)
         await self.send_panel(interaction.channel)
 
     async def handle_sound_id_selection(
@@ -233,9 +247,10 @@ async def panel_command(interaction: discord.Interaction) -> None:
             f"❌ This command can only be used in <#{config.PANEL_CHANNEL_ID}>.", ephemeral=True
         )
         return
-    await interaction.response.send_message(
-        embed=bot.build_panel_embed(), view=SoundboardPanelView(bot.library, bot)
-    )
+    assert isinstance(interaction.channel, discord.TextChannel)
+    await bot.clear_panel_messages(interaction.channel)
+    await interaction.response.send_message("🎛️ Panel reposted below.", ephemeral=True)
+    await bot.send_panel(interaction.channel)
 
 
 async def _sound_autocomplete(

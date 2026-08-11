@@ -1,6 +1,12 @@
 from pathlib import Path
 
-from sound_library import MAX_CATEGORIES, MAX_OPTIONS_PER_CATEGORY, scan_all_clips, scan_sounds
+from sound_library import (
+    MAX_CATEGORIES_PER_MESSAGE,
+    MAX_OPTIONS_PER_CATEGORY,
+    chunk_for_messages,
+    scan_all_clips,
+    scan_sounds,
+)
 
 
 def _touch(path: Path) -> None:
@@ -10,7 +16,7 @@ def _touch(path: Path) -> None:
 
 def test_scan_sounds_creates_missing_folder(tmp_path):
     missing = tmp_path / "sounds"
-    assert scan_sounds(str(missing)) == {}
+    assert scan_sounds(str(missing), max_messages=1) == {}
     assert missing.is_dir()
 
 
@@ -19,7 +25,7 @@ def test_scan_sounds_orders_categories_and_clips(tmp_path):
     _touch(tmp_path / "b" / "first.ogg")
     _touch(tmp_path / "a" / "only.mp3")
 
-    library = scan_sounds(str(tmp_path))
+    library = scan_sounds(str(tmp_path), max_messages=1)
 
     assert list(library.keys()) == ["a", "b"]
     assert [c.label for c in library["b"]] == ["first", "second"]
@@ -31,7 +37,7 @@ def test_scan_sounds_ignores_unsupported_files_and_non_directories(tmp_path):
     _touch(tmp_path / "cat" / ".gitkeep")
     _touch(tmp_path / "cat" / "clip.mp3")
 
-    library = scan_sounds(str(tmp_path))
+    library = scan_sounds(str(tmp_path), max_messages=1)
 
     assert list(library.keys()) == ["cat"]
     assert [c.label for c in library["cat"]] == ["clip"]
@@ -41,33 +47,46 @@ def test_scan_sounds_skips_categories_with_no_supported_clips(tmp_path):
     _touch(tmp_path / "empty" / "notes.txt")
     _touch(tmp_path / "full" / "clip.mp3")
 
-    library = scan_sounds(str(tmp_path))
+    library = scan_sounds(str(tmp_path), max_messages=1)
 
     assert list(library.keys()) == ["full"]
 
 
-def test_scan_sounds_caps_categories(tmp_path):
-    category_names = [f"cat{i}" for i in range(MAX_CATEGORIES + 2)]
+def test_scan_sounds_caps_categories_to_one_message(tmp_path):
+    category_names = [f"cat{i}" for i in range(MAX_CATEGORIES_PER_MESSAGE + 2)]
     for name in category_names:
         _touch(tmp_path / name / "clip.mp3")
 
-    library = scan_sounds(str(tmp_path))
+    library = scan_sounds(str(tmp_path), max_messages=1)
 
-    assert len(library) == MAX_CATEGORIES
-    assert list(library.keys()) == sorted(category_names)[:MAX_CATEGORIES]
+    assert len(library) == MAX_CATEGORIES_PER_MESSAGE
+    assert list(library.keys()) == sorted(category_names)[:MAX_CATEGORIES_PER_MESSAGE]
+
+
+def test_scan_sounds_caps_categories_across_multiple_messages(tmp_path):
+    max_messages = 3
+    cap = MAX_CATEGORIES_PER_MESSAGE * max_messages
+    category_names = [f"cat{i:02d}" for i in range(cap + 2)]
+    for name in category_names:
+        _touch(tmp_path / name / "clip.mp3")
+
+    library = scan_sounds(str(tmp_path), max_messages=max_messages)
+
+    assert len(library) == cap
+    assert list(library.keys()) == sorted(category_names)[:cap]
 
 
 def test_scan_sounds_caps_options_per_category(tmp_path):
     for i in range(MAX_OPTIONS_PER_CATEGORY + 5):
         _touch(tmp_path / "cat" / f"clip{i:02d}.mp3")
 
-    library = scan_sounds(str(tmp_path))
+    library = scan_sounds(str(tmp_path), max_messages=1)
 
     assert len(library["cat"]) == MAX_OPTIONS_PER_CATEGORY
 
 
 def test_scan_all_clips_is_not_capped(tmp_path):
-    category_names = [f"cat{i}" for i in range(MAX_CATEGORIES + 2)]
+    category_names = [f"cat{i}" for i in range(MAX_CATEGORIES_PER_MESSAGE + 2)]
     for name in category_names:
         for i in range(MAX_OPTIONS_PER_CATEGORY + 5):
             _touch(tmp_path / name / f"clip{i:02d}.mp3")
@@ -107,9 +126,26 @@ def test_clip_id_differs_for_different_files(tmp_path):
 def test_panel_and_flat_scan_share_ids_for_the_same_file(tmp_path):
     _touch(tmp_path / "cat" / "clip.mp3")
 
-    library = scan_sounds(str(tmp_path))
+    library = scan_sounds(str(tmp_path), max_messages=1)
     flat = scan_all_clips(str(tmp_path))
 
     panel_clip = library["cat"][0]
     flat_clip = next(c for c in flat if c.path == panel_clip.path)
     assert panel_clip.id == flat_clip.id
+
+
+def test_chunk_for_messages_splits_into_groups_of_four(tmp_path):
+    category_names = [f"cat{i:02d}" for i in range(10)]
+    for name in category_names:
+        _touch(tmp_path / name / "clip.mp3")
+    library = scan_sounds(str(tmp_path), max_messages=3)
+
+    chunks = chunk_for_messages(library)
+
+    assert [len(chunk) for chunk in chunks] == [4, 4, 2]
+    assert list(chunks[0].keys()) == sorted(category_names)[:4]
+    assert list(chunks[2].keys()) == sorted(category_names)[8:10]
+
+
+def test_chunk_for_messages_empty_library_returns_one_empty_chunk():
+    assert chunk_for_messages({}) == [{}]
