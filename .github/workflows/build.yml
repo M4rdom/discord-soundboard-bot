@@ -26,21 +26,10 @@ jobs:
       - name: Install build dependencies
         run: pip install -r requirements-build.txt
 
-      # Only the Linux build bundles ffmpeg (see src/audio_mixer.py's
-      # _ffmpeg_executable, which looks for it next to the PyInstaller-extracted
-      # files at runtime). Linux has a trivial, official apt package to pull it
-      # from; Windows doesn't ship ffmpeg on the runner and has no equivalent
-      # first-party source, so bundling it there would mean downloading a
-      # third-party static build in CI — recommend Docker on Windows instead
-      # (see README's Option C), where the image already installs ffmpeg.
       - name: Install ffmpeg (Linux only, to bundle into the executable)
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      # --collect-all nacl / --hidden-import _cffi_backend are required: PyNaCl's
-      # compiled _sodium extension is loaded through cffi, which PyInstaller's
-      # static analysis doesn't detect on its own — without these flags the
-      # executable silently loses voice support.
       - name: Build executable (Linux, with bundled ffmpeg)
         if: matrix.os == 'ubuntu-latest'
         run: >
@@ -56,9 +45,6 @@ jobs:
           --collect-all nacl --hidden-import _cffi_backend
           src/main.py
 
-      # Renames the built binary to include its target environment, so the
-      # filename attached to the Release (not just the Actions artifact name)
-      # makes it obvious which one to download for Linux vs Windows.
       - name: Rename executable with environment suffix
         shell: bash
         run: |
@@ -88,10 +74,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Computes correctly-cased ghcr.io tags: always "latest", plus the
-      # version tag (e.g. v1.0.0) when triggered by a tag push. Image names
-      # must be lowercase, which this action handles even though the GitHub
-      # username (M4rdom) isn't.
       - name: Docker metadata
         id: meta
         uses: docker/metadata-action@v5

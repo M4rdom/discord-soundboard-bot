@@ -8,7 +8,7 @@ Soundboard panel bot for a private Discord server. It scans a local `sounds/` fo
 
 - Automatic scan of `sounds/<category>/` on startup (`.mp3` and `.ogg` formats).
 - `/panel` command that posts the panel (also posted automatically on bot startup).
-- One native Discord `Select Menu` per category (see [Limitations](#limitation-each-panel-message-caps-at-4-or-5-categories-25-sounds-each) for the panel's category/sound cap).
+- One native Discord `Select Menu` per category, spread across as many messages as needed (see [Limitations](#limitation-25-sounds-per-category) for the per-category sound cap).
 - `/sound <name>` command with autocomplete to search and play **any** sound in the library, without that cap.
 - Red **🛑 Stop Audio** button.
 - The bot automatically joins or moves to the voice channel of the user interacting with it.
@@ -16,13 +16,13 @@ Soundboard panel bot for a private Discord server. It scans a local `sounds/` fo
 - After every action (play or stop), the panel is reposted at the bottom of the channel so it stays visible.
 - The bot only responds inside the text channel configured in `.env`.
 
-## Limitation: each panel message caps at 4 or 5 categories, 25 sounds each
+## Limitation: 25 sounds per category
 
-> ⚠️ This isn't a bug or a choice we made — it's a hard limit of Discord's UI. A message supports a maximum of **5 component rows**, and each category's `Select Menu` takes up a whole row. Within each of those, a `Select Menu` supports at most **25 options** — that part isn't configurable, it's a Discord ceiling.
+> ⚠️ This isn't a bug or a choice we made — it's a hard limit of Discord's UI. A `Select Menu` supports at most **25 options**, so a single category can show at most 25 sounds in the panel — that part isn't configurable, it's a Discord ceiling.
 
-Fitting more than one message's worth of categories is worked around by spreading the panel across several messages: set **`PANEL_MAX_MESSAGES`** in `.env` (defaults to **3**). Only the **last** panel message reserves a row for the **🛑 Stop Audio** button (so it caps at **4 categories**); every earlier message uses all **5** rows for category menus instead, since it doesn't need one. That works out to `5 × (PANEL_MAX_MESSAGES − 1) + 4` categories total — **14** with the default of 3 (up to **350** sounds). After every action the bot deletes and reposts the *whole* set of panel messages together, so they always stay as one contiguous block at the bottom of the channel instead of drifting apart as the conversation continues.
+The number of *categories*, on the other hand, isn't really a limitation — it's just a `.env` setting. A message supports at most **5 component rows**, and each category's `Select Menu` takes up a whole row, so the panel spreads across as many messages as it needs: set **`PANEL_MAX_MESSAGES`** in `.env` (defaults to **3**). Only the **last** panel message reserves a row for the **🛑 Stop Audio** button (so it caps at **4 categories**); every earlier message uses all **5** rows for category menus instead, since it doesn't need one. That works out to `5 × (PANEL_MAX_MESSAGES − 1) + 4` categories total — **14** with the default of 3 — and there's no ceiling on `PANEL_MAX_MESSAGES` itself, so raising it raises the category count with it. After every action the bot deletes and reposts the *whole* set of panel messages together, so they always stay as one contiguous block at the bottom of the channel instead of drifting apart as the conversation continues.
 
-If your library is still bigger than that, anything beyond the cap is silently skipped from the panel (a warning is logged on startup naming what got left out) — but nothing is actually lost or deleted. **The `/sound <name>` command searches the entire library**, with no category or count limit and regardless of `PANEL_MAX_MESSAGES`, because Discord's autocomplete isn't bound by the same per-message row constraint — it just returns up to 25 matching suggestions as you type. In practice: use the panel for quick access to your most common sounds, and `/sound` to reach anything past the panel's cap.
+If a category has more than 25 sounds, or your library has more categories than the current `PANEL_MAX_MESSAGES` allows, the excess is silently skipped from the panel (a warning is logged on startup naming what got left out) — but nothing is actually lost or deleted. **The `/sound <name>` command searches the entire library**, with no per-category or per-message limit, because Discord's autocomplete isn't bound by the same Select Menu constraints — it just returns up to 25 matching suggestions as you type. In practice: use the panel for quick access, raise `PANEL_MAX_MESSAGES` if you outgrow it, and `/sound` to reach anything past a category's 25-sound cap.
 
 ## Project structure
 
@@ -107,7 +107,7 @@ sounds/
     └── applause.ogg
 ```
 
-> ⚠️ More than 4 categories, or more than 25 sounds in one? See [Limitation: each panel message caps at 4 or 5 categories, 25 sounds each](#limitation-each-panel-message-caps-at-4-or-5-categories-25-sounds-each) — nothing is lost, `/sound` still reaches everything.
+> ⚠️ More than 25 sounds in one category, or more categories than `PANEL_MAX_MESSAGES` allows? See [Limitation: 25 sounds per category](#limitation-25-sounds-per-category) — nothing is lost, `/sound` still reaches everything.
 >
 > ⚠️ If the same category has both `bruh.mp3` and `bruh.ogg`, they'll show up as two options with the same name (not deduplicated).
 
