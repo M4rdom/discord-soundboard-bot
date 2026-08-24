@@ -1,0 +1,12 @@
+.git
+.devcontainer
+.container
+.env
+sounds/
+tests/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
