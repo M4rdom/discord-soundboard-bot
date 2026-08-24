@@ -53,6 +53,7 @@ If a category has more than 25 sounds, or your library has more categories than 
 ├── requirements.txt        # Runtime deps only (used by .container/Dockerfile)
 ├── requirements-dev.txt    # requirements.txt + pytest/ruff/pyright, for local dev
 ├── requirements-build.txt  # requirements.txt + pyinstaller, for packaging the executables
+├── CHANGELOG.md            # Notable changes per version (Keep a Changelog format)
 └── .env.example
 ```
 
