@@ -36,7 +36,7 @@ If a category has more than 25 sounds, or your library has more categories than 
 │   └── docker-compose.yml   # Runs .container/Dockerfile with sounds/ bind-mounted
 ├── .github/
 │   └── workflows/
-│       └── build.yml       # Builds the Windows/Linux standalone executables (see below)
+│       └── build.yml       # Builds the Linux executable and the ghcr.io image (see below)
 ├── sounds/                # Sound categories (one subfolder = one category = one menu)
 │   ├── memes/*.mp3
 │   ├── games/*.mp3
@@ -120,8 +120,8 @@ There are four ways to run this; which one to pick depends on your OS and what y
 
 | Environment | Recommended option | Why |
 |---|---|---|
-| **Windows** | [Option C: Docker](#option-c-plain-docker-with-sounds-mounted-as-a-volume-windows) | No native Windows executable bundles `ffmpeg` (see Option D) — Docker sidesteps installing it separately, and `restart: unless-stopped` keeps the bot up. |
-| **Linux** | [Option D: standalone executable](#option-d-standalone-executable-recommended-for-linux-desktops) | The Linux build bundles `ffmpeg` — download it and run it, nothing else to install. |
+| **Windows** | [Option C: Docker](#option-c-plain-docker-with-sounds-mounted-as-a-volume-windows) | There's no Windows executable (see Option D) — Docker sidesteps installing Python/`ffmpeg` separately, and `restart: unless-stopped` keeps the bot up. |
+| **Linux** | [Option D: standalone executable](#option-d-standalone-executable-linux-only) | Bundles `ffmpeg` — download it and run it, nothing else to install. |
 | **Developing/contributing** (either OS) | [Option A: Dev Container](#option-a-dev-container-recommended) | Reproducible environment with the test/lint/type-check tooling already installed. |
 | **Anything without Docker or a downloaded binary** | [Option B: local Python environment](#option-b-local-environment) | Manual fallback — needs Python and `ffmpeg` installed yourself. |
 
@@ -150,7 +150,7 @@ python src/main.py
 
 Use this if you just want to run the bot with Docker Desktop on Windows — without VS Code — and keep your sound files on the host so you can drag-and-drop new ones without rebuilding the image. This uses `.container/Dockerfile` (a lean runtime image), not `.devcontainer/Dockerfile` (which is only for the VS Code dev environment) — they live in separate folders since they serve different purposes.
 
-> 💡 On a tagged release, `.github/workflows/build.yml` also publishes a ready-to-run image to `ghcr.io/m4rdom/discord-soundboard-bot:latest`. That skips the build step entirely — handy on a Linux VPS, where you can just `docker pull` instead of cloning the repo:
+> 💡 `.github/workflows/build.yml` also publishes a ready-to-run image to `ghcr.io/m4rdom/discord-soundboard-bot` on every push to `main` (tag `:latest`, plus `:sha-<commit>` for a pinnable, traceable version) and on tagged releases (adds the version tag, e.g. `:v1.0.0`). That skips the build step entirely — handy on a Linux server (e.g. a Proxmox LXC/VM), where you can just `docker pull` instead of cloning the repo:
 > ```bash
 > docker run -d --name soundboard --env-file .env -v "$(pwd)/sounds:/app/sounds" ghcr.io/m4rdom/discord-soundboard-bot:latest
 > ```
@@ -186,22 +186,20 @@ From `cmd.exe`, replace `${PWD}` with `%cd%`. If your sounds live elsewhere, use
 
 > ⚠️ The container only ever gets your Discord token via `--env-file .env` / `env_file:` (an environment variable at runtime) — `.env` itself is never copied into the image, so it can't leak through a shared image layer.
 
-### Option D: Standalone executable (recommended for Linux desktops)
+### Option D: Standalone executable (Linux only)
 
-Download the ready-made `soundboard-linux` (or `soundboard-windows.exe`) executable and just run it — no Python, no Docker, no build step on your end. It's produced by `.github/workflows/build.yml` with [PyInstaller](https://pyinstaller.org/), which bundles the Python runtime and all pip dependencies (`discord.py`, `PyNaCl`, `python-dotenv`) into that single file — the filename itself tells you which environment it's for. (If you're the one maintaining the bot and want to build it yourself instead of downloading it, see [Building the standalone executables](#building-the-standalone-executables) under Development.)
+Download the ready-made `soundboard-linux` executable and just run it — no Python, no Docker, no build step on your end, and `ffmpeg` comes bundled in. It's produced by `.github/workflows/build.yml` with [PyInstaller](https://pyinstaller.org/), which bundles the Python runtime and all pip dependencies (`discord.py`, `PyNaCl`, `python-dotenv`) into that single file. (If you're the one maintaining the bot and want to build it yourself instead of downloading it, see [Building the standalone executable](#building-the-standalone-executable) under Development.)
 
-> ⚠️ **This is the recommended option on Linux, but not on Windows.** `soundboard-linux` also bundles `ffmpeg` itself — nothing else to install. `soundboard-windows.exe` does **not** bundle `ffmpeg` (see the note below), which is exactly why [Option C (Docker)](#option-c-plain-docker-with-sounds-mounted-as-a-volume-windows) is the recommended path on Windows instead — its image already installs `ffmpeg` for you.
+> There's no Windows executable — only Docker is built for Windows. [Option C](#option-c-plain-docker-with-sounds-mounted-as-a-volume-windows) is the recommended (and only prebuilt) path there.
 
 **1. Download it:**
 
-- Go to the repo's **Actions** tab → **Build standalone executables** → open the latest successful run → download `soundboard-linux` (or `soundboard-windows`) from **Artifacts**.
-- Or, if a version tag was pushed (e.g. `v1.0.0`), grab `soundboard-linux` / `soundboard-windows.exe` directly from that tag's **Release** page instead.
+- Go to the repo's **Actions** tab → **Build executable and image** → open the latest successful run (triggered by a version tag or a manual run) → download `soundboard-linux` from **Artifacts**.
+- Or, if a version tag was pushed (e.g. `v1.0.0`), grab it directly from that tag's **Release** page instead.
 
 **2. Set it up:** put the executable in its own folder, alongside a `.env` (copied from `.env.example` and filled in) and a `sounds/` folder with your categories — same layout as [section 3](#3-add-sounds).
 
-**3. `ffmpeg`, if you're on Windows** — `soundboard-linux` bundles it, so this step is Windows-only. `soundboard-windows.exe` doesn't bundle it: there's no first-party source of a portable `ffmpeg.exe` the CI could pull from without depending on a third-party download, so download a portable build yourself (e.g. from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) or [BtbN's builds](https://github.com/BtbN/FFmpeg-Builds/releases)) and drop `ffmpeg.exe` in the same folder as `soundboard-windows.exe` (or anywhere on `PATH`) — or just use Option C instead, which doesn't require this step.
-
-**4. Run it:** `./soundboard-linux` from a terminal on Linux (`chmod +x soundboard-linux` first if it lost its executable bit, e.g. after unzipping), or double-click `soundboard-windows.exe` on Windows.
+**3. Run it:** `./soundboard-linux` from a terminal (`chmod +x soundboard-linux` first if it lost its executable bit, e.g. after unzipping).
 
 The `--collect-all nacl --hidden-import _cffi_backend` flags are required on both platforms, not optional: PyNaCl's compiled `_sodium` extension is loaded through `cffi`, which PyInstaller's static analysis doesn't detect on its own — without these flags the executable builds fine but silently loses voice support (logs `PyNaCl is not installed` at startup instead of failing loudly).
 
@@ -251,33 +249,20 @@ pyright
 
 `requirements.txt` and `requirements-dev.txt` pin exact versions rather than `>=` ranges, so `pip install` always reproduces the versions this project was last tested against. When you deliberately want to upgrade a dependency, bump its pin by hand and re-run the checks above.
 
-### Building the standalone executables
+### Building the standalone executable
 
-Regular users don't need this — see [Option D](#option-d-standalone-executable-recommended-for-linux-desktops) to just download and run one. This is only for building them yourself instead of using CI: needs Python 3.11+ on the machine doing the *building* (the resulting executable itself needs nothing, that's the whole point). PyInstaller doesn't cross-compile, so build on Linux to get the Linux binary, and on Windows to get the `.exe` — `.github/workflows/build.yml` does both by running on a `ubuntu-latest`/`windows-latest` matrix.
-
-On Linux:
+Regular users don't need this — see [Option D](#option-d-standalone-executable-linux-only) to just download and run one. This is only for building it yourself instead of using CI: needs Python 3.11+ on the machine doing the *building* (the resulting executable itself needs nothing, that's the whole point). PyInstaller doesn't cross-compile, so this has to run on Linux.
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements-build.txt
-pyinstaller --onefile --name soundboard --collect-all nacl --hidden-import _cffi_backend src/main.py
+pyinstaller --onefile --name soundboard --collect-all nacl --hidden-import _cffi_backend --add-binary "$(command -v ffmpeg):." src/main.py
 ```
 
-The binary is written to `dist/soundboard`.
+The binary is written to `dist/soundboard`. `--add-binary` needs `ffmpeg` installed on the building machine (`sudo apt install ffmpeg` or your distro's equivalent) — it gets bundled into the executable, not just referenced.
 
-On Windows (PowerShell):
-
-```powershell
-python -m venv venv
-venv\Scripts\Activate.ps1
-pip install -r requirements-build.txt
-pyinstaller --onefile --name soundboard --collect-all nacl --hidden-import _cffi_backend src/main.py
-```
-
-The executable is written to `dist\soundboard.exe`.
-
-The `--collect-all nacl --hidden-import _cffi_backend` flags are required on both platforms, not optional: PyNaCl's compiled `_sodium` extension is loaded through `cffi`, which PyInstaller's static analysis doesn't detect on its own — without these flags the executable builds fine but silently loses voice support (logs `PyNaCl is not installed` at startup instead of failing loudly).
+The `--collect-all nacl --hidden-import _cffi_backend` flags are required, not optional: PyNaCl's compiled `_sodium` extension is loaded through `cffi`, which PyInstaller's static analysis doesn't detect on its own — without these flags the executable builds fine but silently loses voice support (logs `PyNaCl is not installed` at startup instead of failing loudly).
 
 ## Technical notes
 

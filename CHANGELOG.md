@@ -20,11 +20,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - The category count is no longer treated as a fixed limitation — it's
   configurable via `PANEL_MAX_MESSAGES` with no upper bound of its own. Only
   the 25-sounds-per-category Select Menu cap remains fixed.
-- Released executables are named `soundboard-linux` / `soundboard-windows.exe`
-  instead of a bare `soundboard` / `soundboard.exe`, so the filename itself
-  says which environment it's for.
+- Released executable is named `soundboard-linux` instead of a bare
+  `soundboard`, so the filename itself says which environment it's for.
 - Simplified the panel's summary embed: no emoji, no per-category field
   listing (redundant with the Select Menu placeholders).
+- The `ghcr.io` image now builds and publishes on every push to `main`
+  (tagged `:latest` and `:sha-<commit>`), not just on tagged releases.
+
+### Removed
+
+- Dropped the Windows executable build — it was never bundling `ffmpeg`
+  anyway, and Docker (Option C) is the supported path on Windows. The
+  workflow now only builds `soundboard-linux`.
 
 ### Fixed
 
