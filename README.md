@@ -186,6 +186,8 @@ From `cmd.exe`, replace `${PWD}` with `%cd%`. If your sounds live elsewhere, use
 
 > ⚠️ The container only ever gets your Discord token via `--env-file .env` / `env_file:` (an environment variable at runtime) — `.env` itself is never copied into the image, so it can't leak through a shared image layer.
 
+> ⚠️ The container runs as a non-root user (fixed UID `1000`), not root. Docker doesn't remap UIDs the way an unprivileged LXC does, so this user needs to actually be able to read your bind-mounted `sounds/` files as seen from the host — if you get empty-library warnings despite the folder having files, check its permissions (`chmod -R o+rX sounds/` on Linux hosts is the usual fix; on Windows/WSL this generally isn't an issue).
+
 ### Option D: Standalone executable (Linux only)
 
 Download the ready-made `soundboard-linux` executable and just run it — no Python, no Docker, no build step on your end. It's produced by `.github/workflows/build.yml` with [PyInstaller](https://pyinstaller.org/), which bundles the Python runtime and all pip dependencies (`discord.py`, `PyNaCl`, `python-dotenv`) into that single file. (If you're the one maintaining the bot and want to build it yourself instead of downloading it, see [Building the standalone executable](#building-the-standalone-executable) under Development.)

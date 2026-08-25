@@ -8,12 +8,18 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Fixed UID so it lines up predictably with host-side sounds/ permissions
+# (see README's Option C) instead of whatever useradd would pick otherwise.
+RUN useradd --uid 1000 --no-create-home --shell /bin/false appuser
+
 WORKDIR /app
 
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY src/ ./src/
+COPY --chown=appuser:appuser src/ ./src/
+
+USER appuser
 
 # sounds/ is deliberately not copied here: it's meant to be bind-mounted at
 # runtime (see docker-compose.yml), so adding sounds never requires a rebuild.

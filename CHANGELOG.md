@@ -12,6 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `LOG_LEVEL` (`.env`, default `INFO`) to change log verbosity per instance
   without touching code — useful when running one bot per client and
   needing to debug a single one.
+- A `Tests` CI workflow (`.github/workflows/test.yml`) running `ruff`,
+  `pyright` and `pytest` on every push to `main` and every pull request —
+  previously nothing enforced these before code reached `main`.
+
+### Security
+
+- `.container/Dockerfile` now runs the bot as a non-root user (fixed UID
+  `1000`) instead of root, both during the build (`pip install` still runs
+  as root, but the final `CMD` doesn't) and at runtime.
 
 ### Removed
 
