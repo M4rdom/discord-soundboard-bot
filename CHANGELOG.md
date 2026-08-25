@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - A `Tests` CI workflow (`.github/workflows/test.yml`) running `ruff`,
   `pyright` and `pytest` on every push to `main` and every pull request —
   previously nothing enforced these before code reached `main`.
+- Test coverage for `audio_mixer.py` (`SoundMixer`'s mixing/cleanup logic,
+  using fake sources instead of real `ffmpeg`) and `panel_view.py` (Select
+  Menu/button construction, label truncation, `custom_id` uniqueness) — the
+  two previously-untested modules most likely to silently break playback or
+  the panel's components.
 
 ### Security
 
