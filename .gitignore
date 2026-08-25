@@ -14,7 +14,7 @@ venv/
 .pytest_cache/
 .ruff_cache/
 
-# PyInstaller build output (see requirements-build.txt / .github/workflows/build.yml)
+# PyInstaller build output (see requirements-dev.txt / .github/workflows/build.yml)
 build/
 dist/
 *.spec

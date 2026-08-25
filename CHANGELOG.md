@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   without touching code — useful when running one bot per client and
   needing to debug a single one.
 
+### Removed
+
+- `requirements-build.txt`, merged into `requirements-dev.txt`. `pyinstaller`
+  was its only addition over the dev requirements, and the two were
+  installed together in practice (devcontainer, CI) anyway.
+
 ### Fixed
 
 - Stopped bundling `ffmpeg` into the Linux standalone executable. It worked

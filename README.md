@@ -51,8 +51,7 @@ If a category has more than 25 sounds, or your library has more categories than 
 ├── .dockerignore           # Applies to .container/Dockerfile's build context (repo root)
 ├── pyproject.toml          # pytest / ruff / pyright configuration
 ├── requirements.txt        # Runtime deps only (used by .container/Dockerfile)
-├── requirements-dev.txt    # requirements.txt + pytest/ruff/pyright, for local dev
-├── requirements-build.txt  # requirements.txt + pyinstaller, for packaging the executables
+├── requirements-dev.txt    # requirements.txt + pytest/ruff/pyright/pyinstaller, for local dev and packaging
 ├── CHANGELOG.md            # Notable changes per version (Keep a Changelog format)
 └── .env.example
 ```
@@ -225,7 +224,7 @@ The `--collect-all nacl --hidden-import _cffi_backend` flags are required on bot
 
 ## Development
 
-Install dev dependencies (adds `pytest`, `ruff` and `pyright` on top of the runtime requirements):
+Install dev dependencies (adds `pytest`, `ruff`, `pyright` and `pyinstaller` on top of the runtime requirements):
 
 ```bash
 pip install -r requirements-dev.txt
@@ -259,7 +258,7 @@ Regular users don't need this — see [Option D](#option-d-standalone-executable
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements-build.txt
+pip install -r requirements-dev.txt
 pyinstaller --onefile --name soundboard --collect-all nacl --hidden-import _cffi_backend src/main.py
 ```
 

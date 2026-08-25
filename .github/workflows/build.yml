@@ -27,7 +27,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install build dependencies
-        run: pip install -r requirements-build.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Build executable
         run: >
