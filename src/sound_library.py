@@ -16,7 +16,6 @@ MAX_CATEGORIES_PER_MESSAGE = 4
 MAX_CATEGORIES_FULL_MESSAGE = 5
 MAX_OPTIONS_PER_CATEGORY = 25
 
-# ffmpeg decodes both formats equally well; no conversion needed.
 SUPPORTED_EXTENSIONS = (".mp3", ".ogg")
 
 

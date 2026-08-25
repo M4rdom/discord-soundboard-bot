@@ -42,7 +42,6 @@ class SoundboardBot(commands.Bot):
                 config.SOUNDS_DIR,
             )
 
-        # Register each message's view with fixed custom_ids so they survive bot restarts.
         chunks = chunk_for_messages(self.library)
         last_index = len(chunks) - 1
         for index, chunk in enumerate(chunks):

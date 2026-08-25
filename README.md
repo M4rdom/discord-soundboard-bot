@@ -121,7 +121,7 @@ There are four ways to run this; which one to pick depends on your OS and what y
 | Environment | Recommended option | Why |
 |---|---|---|
 | **Windows** | [Option C: Docker](#option-c-plain-docker-with-sounds-mounted-as-a-volume-windows) | There's no Windows executable (see Option D) — Docker sidesteps installing Python/`ffmpeg` separately, and `restart: unless-stopped` keeps the bot up. |
-| **Linux** | [Option D: standalone executable](#option-d-standalone-executable-linux-only) | Bundles `ffmpeg` — download it and run it, nothing else to install. |
+| **Linux** | [Option D: standalone executable](#option-d-standalone-executable-linux-only) | Download and run — just needs `ffmpeg`/`libopus0` installed via your package manager first. |
 | **Developing/contributing** (either OS) | [Option A: Dev Container](#option-a-dev-container-recommended) | Reproducible environment with the test/lint/type-check tooling already installed. |
 | **Anything without Docker or a downloaded binary** | [Option B: local Python environment](#option-b-local-environment) | Manual fallback — needs Python and `ffmpeg` installed yourself. |
 
@@ -188,7 +188,7 @@ From `cmd.exe`, replace `${PWD}` with `%cd%`. If your sounds live elsewhere, use
 
 ### Option D: Standalone executable (Linux only)
 
-Download the ready-made `soundboard-linux` executable and just run it — no Python, no Docker, no build step on your end, and `ffmpeg` comes bundled in. It's produced by `.github/workflows/build.yml` with [PyInstaller](https://pyinstaller.org/), which bundles the Python runtime and all pip dependencies (`discord.py`, `PyNaCl`, `python-dotenv`) into that single file. (If you're the one maintaining the bot and want to build it yourself instead of downloading it, see [Building the standalone executable](#building-the-standalone-executable) under Development.)
+Download the ready-made `soundboard-linux` executable and just run it — no Python, no Docker, no build step on your end. It's produced by `.github/workflows/build.yml` with [PyInstaller](https://pyinstaller.org/), which bundles the Python runtime and all pip dependencies (`discord.py`, `PyNaCl`, `python-dotenv`) into that single file. (If you're the one maintaining the bot and want to build it yourself instead of downloading it, see [Building the standalone executable](#building-the-standalone-executable) under Development.)
 
 > There's no Windows executable — only Docker is built for Windows. [Option C](#option-c-plain-docker-with-sounds-mounted-as-a-volume-windows) is the recommended (and only prebuilt) path there.
 
@@ -197,9 +197,11 @@ Download the ready-made `soundboard-linux` executable and just run it — no Pyt
 - Go to the repo's **Actions** tab → **Build executable and image** → open the latest successful run (triggered by a version tag or a manual run) → download `soundboard-linux` from **Artifacts**.
 - Or, if a version tag was pushed (e.g. `v1.0.0`), grab it directly from that tag's **Release** page instead.
 
-**2. Set it up:** put the executable in its own folder, alongside a `.env` (copied from `.env.example` and filled in) and a `sounds/` folder with your categories — same layout as [section 3](#3-add-sounds).
+**2. Install `ffmpeg` and `libopus`** on the machine that'll run it — the executable doesn't bundle them: `sudo apt install ffmpeg libopus0` (or your distro's equivalent). This isn't a shortcut we skipped; bundling `ffmpeg` was tried and reverted, because its own shared-library dependencies (video/audio backends it links against) aren't portable across different systems even when the base OS matches — it works on the exact machine it was built on and fails elsewhere with missing-library errors. Installing it via your package manager gets a build with correctly resolved dependencies for *your* system instead.
 
-**3. Run it:** `./soundboard-linux` from a terminal (`chmod +x soundboard-linux` first if it lost its executable bit, e.g. after unzipping).
+**3. Set it up:** put the executable in its own folder, alongside a `.env` (copied from `.env.example` and filled in) and a `sounds/` folder with your categories — same layout as [section 3](#3-add-sounds).
+
+**4. Run it:** `./soundboard-linux` from a terminal (`chmod +x soundboard-linux` first if it lost its executable bit, e.g. after unzipping).
 
 The `--collect-all nacl --hidden-import _cffi_backend` flags are required on both platforms, not optional: PyNaCl's compiled `_sodium` extension is loaded through `cffi`, which PyInstaller's static analysis doesn't detect on its own — without these flags the executable builds fine but silently loses voice support (logs `PyNaCl is not installed` at startup instead of failing loudly).
 
@@ -251,16 +253,16 @@ pyright
 
 ### Building the standalone executable
 
-Regular users don't need this — see [Option D](#option-d-standalone-executable-linux-only) to just download and run one. This is only for building it yourself instead of using CI: needs Python 3.11+ on the machine doing the *building* (the resulting executable itself needs nothing, that's the whole point). PyInstaller doesn't cross-compile, so this has to run on Linux.
+Regular users don't need this — see [Option D](#option-d-standalone-executable-linux-only) to just download and run one. This is only for building it yourself instead of using CI: needs Python 3.11+ on the machine doing the *building*. PyInstaller doesn't cross-compile, so this has to run on Linux. `ffmpeg`/`libopus` aren't bundled (see Option D for why), only referenced at runtime, so they're not needed at build time either.
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements-build.txt
-pyinstaller --onefile --name soundboard --collect-all nacl --hidden-import _cffi_backend --add-binary "$(command -v ffmpeg):." src/main.py
+pyinstaller --onefile --name soundboard --collect-all nacl --hidden-import _cffi_backend src/main.py
 ```
 
-The binary is written to `dist/soundboard`. `--add-binary` needs `ffmpeg` installed on the building machine (`sudo apt install ffmpeg` or your distro's equivalent) — it gets bundled into the executable, not just referenced.
+The binary is written to `dist/soundboard`.
 
 The `--collect-all nacl --hidden-import _cffi_backend` flags are required, not optional: PyNaCl's compiled `_sodium` extension is loaded through `cffi`, which PyInstaller's static analysis doesn't detect on its own — without these flags the executable builds fine but silently loses voice support (logs `PyNaCl is not installed` at startup instead of failing loudly).
 

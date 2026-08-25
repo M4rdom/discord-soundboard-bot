@@ -29,14 +29,10 @@ jobs:
       - name: Install build dependencies
         run: pip install -r requirements-build.txt
 
-      - name: Install ffmpeg (bundled into the executable)
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
-
       - name: Build executable
         run: >
           pyinstaller --onefile --name soundboard
           --collect-all nacl --hidden-import _cffi_backend
-          --add-binary "$(command -v ffmpeg):."
           src/main.py
 
       - name: Rename with environment suffix

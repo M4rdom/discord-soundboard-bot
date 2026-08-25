@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Stopped bundling `ffmpeg` into the Linux standalone executable. It worked
+  on the exact machine it was built on but failed elsewhere — Ubuntu's
+  `ffmpeg` links against ~100 shared libraries (video/audio backends), and a
+  minimal target system (e.g. a fresh LXC container) is missing most of
+  them, causing silent playback failures (`OpusNotLoaded`, then
+  `error while loading shared libraries`). Installing `ffmpeg`/`libopus0`
+  via the system package manager resolves the full dependency chain
+  correctly for that specific system, which bundling a single binary can't.
+  Docker was never affected, since it installs `ffmpeg` via `apt` inside
+  the image itself. See Option D in the README.
+
 ## [1.0.0] - 2026-08-24
 
 ### Added

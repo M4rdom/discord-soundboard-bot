@@ -1,29 +1,13 @@
 """Audio source that lets several sounds overlap on the same voice connection."""
 
 import audioop
-import sys
 import threading
-from pathlib import Path
 
 import discord
 
 # 20 ms of stereo PCM at 48 kHz / 16 bit = 3840 bytes per frame.
 FRAME_SIZE = discord.opus.Encoder.FRAME_SIZE
 SILENT_FRAME = b"\x00" * FRAME_SIZE
-
-
-def _ffmpeg_executable() -> str:
-    # The Linux standalone executable (see .github/workflows/build.yml) bundles
-    # its own ffmpeg binary next to the PyInstaller-extracted files, since it
-    # can't assume the host has ffmpeg on PATH. Fall back to a plain "ffmpeg"
-    # (resolved via PATH) everywhere else — normal `python src/main.py` runs,
-    # Docker (which installs ffmpeg in the image), and the Windows executable.
-    meipass = getattr(sys, "_MEIPASS", None)
-    if meipass is not None:
-        bundled = Path(meipass) / "ffmpeg"
-        if bundled.exists():
-            return str(bundled)
-    return "ffmpeg"
 
 
 class SoundMixer(discord.AudioSource):
@@ -40,7 +24,7 @@ class SoundMixer(discord.AudioSource):
         self._lock = threading.Lock()
 
     def add_source(self, filepath: str) -> None:
-        source = discord.FFmpegPCMAudio(filepath, executable=_ffmpeg_executable())
+        source = discord.FFmpegPCMAudio(filepath)
         with self._lock:
             self._sources.append(source)
 
