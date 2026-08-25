@@ -2,6 +2,8 @@
 
 Soundboard panel bot for a private Discord server. It scans a local `sounds/` folder and exposes a panel with dropdown menus (one per category) to play sound effects in the user's voice channel, with overlapping audio and a button to stop everything.
 
+This README covers setup and deployment. For how the bot is actually built internally — module responsibilities, key design decisions, the deployment pipeline and why it's shaped the way it is — see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ![Sound panel posted by the bot](.github/assets/Control_Panel_View_Example.png)
 
 ## Features
@@ -53,6 +55,7 @@ If a category has more than 25 sounds, or your library has more categories than 
 ├── requirements.txt        # Runtime deps only (used by .container/Dockerfile)
 ├── requirements-dev.txt    # requirements.txt + pytest/ruff/pyright/pyinstaller, for local dev and packaging
 ├── CHANGELOG.md            # Notable changes per version (Keep a Changelog format)
+├── ARCHITECTURE.md         # How the bot is built internally, and why
 └── .env.example
 ```
 
