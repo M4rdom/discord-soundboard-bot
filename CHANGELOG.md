@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `LOG_LEVEL` (`.env`, default `INFO`) to change log verbosity per instance
+  without touching code — useful when running one bot per client and
+  needing to debug a single one.
+
 ### Fixed
 
 - Stopped bundling `ffmpeg` into the Linux standalone executable. It worked

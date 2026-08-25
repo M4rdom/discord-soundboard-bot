@@ -14,6 +14,7 @@ def reload_config(monkeypatch, tmp_path):
     monkeypatch.delenv("GUILD_ID", raising=False)
     monkeypatch.delenv("SOUNDS_DIR", raising=False)
     monkeypatch.delenv("PANEL_MAX_MESSAGES", raising=False)
+    monkeypatch.delenv("LOG_LEVEL", raising=False)
 
     def _reload():
         sys.modules.pop("config", None)
@@ -42,5 +43,22 @@ def test_panel_max_messages_rejects_non_integer(monkeypatch, reload_config):
 
 def test_panel_max_messages_rejects_zero(monkeypatch, reload_config):
     monkeypatch.setenv("PANEL_MAX_MESSAGES", "0")
+    with pytest.raises(RuntimeError):
+        reload_config()
+
+
+def test_log_level_defaults_to_info(reload_config):
+    config = reload_config()
+    assert config.LOG_LEVEL == "INFO"
+
+
+def test_log_level_reads_env_override(monkeypatch, reload_config):
+    monkeypatch.setenv("LOG_LEVEL", "debug")
+    config = reload_config()
+    assert config.LOG_LEVEL == "DEBUG"
+
+
+def test_log_level_rejects_unknown_value(monkeypatch, reload_config):
+    monkeypatch.setenv("LOG_LEVEL", "VERBOSE")
     with pytest.raises(RuntimeError):
         reload_config()

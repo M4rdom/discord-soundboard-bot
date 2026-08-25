@@ -12,7 +12,7 @@ from audio_mixer import SoundMixer
 from panel_view import SoundboardPanelView
 from sound_library import SoundClip, chunk_for_messages, scan_all_clips, scan_sounds
 
-logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s: %(message)s")
+logging.basicConfig(level=config.LOG_LEVEL, format="[%(asctime)s] %(levelname)s: %(message)s")
 log = logging.getLogger("soundboard")
 
 # discord.Intents.default() already includes voice_states (not a privileged intent);

@@ -35,6 +35,19 @@ def _positive_int(name: str, default: int) -> int:
     return parsed
 
 
+_VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+
+
+def _log_level(name: str, default: str) -> str:
+    value = os.getenv(name)
+    if not value:
+        return default
+    upper = value.upper()
+    if upper not in _VALID_LOG_LEVELS:
+        raise RuntimeError(f"'{name}' must be one of {sorted(_VALID_LOG_LEVELS)}, got '{value}'")
+    return upper
+
+
 DISCORD_TOKEN: str = _require_str("DISCORD_TOKEN")
 PANEL_CHANNEL_ID: int = _require_int("PANEL_CHANNEL_ID")
 
@@ -46,3 +59,5 @@ SOUNDS_DIR: str = os.getenv("SOUNDS_DIR", "sounds")
 # How many messages the panel can spread across to fit more than 4 categories
 # (Discord's per-message Select Menu limit). See sound_library.MAX_CATEGORIES_PER_MESSAGE.
 PANEL_MAX_MESSAGES: int = _positive_int("PANEL_MAX_MESSAGES", default=3)
+
+LOG_LEVEL: str = _log_level("LOG_LEVEL", default="INFO")

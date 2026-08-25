@@ -89,6 +89,7 @@ PANEL_CHANNEL_ID=123456789012345678   # text channel where the panel will live
 GUILD_ID=123456789012345678           # optional, syncs /panel instantly during development
 SOUNDS_DIR=sounds                     # optional
 PANEL_MAX_MESSAGES=3                  # optional, see Limitations below
+LOG_LEVEL=INFO                        # optional, one of DEBUG/INFO/WARNING/ERROR/CRITICAL
 ```
 
 To get the IDs, enable **Developer Mode** in Discord (Settings → Advanced) and right-click the channel/server → **Copy ID**.
